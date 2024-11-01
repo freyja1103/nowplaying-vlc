@@ -28,8 +28,15 @@ type VLCStatus struct {
 func main() {
 	vlcURL := flag.String("url", "http://localhost:8080/requests/status.json", "VLC API URL")
 	password := flag.String("pass", "", "Lua HTTP Password")
+	flag.Parse()
+
 	var status VLCStatus
 	GetVLCStatus(&status, *vlcURL, *password)
+	if status.Information.Category.Meta.Title == "" &&
+		status.Information.Category.Meta.Artist == "" &&
+		status.Information.Category.Meta.Album == "" {
+		return
+	}
 
 	log.Printf("Title: %s\n", status.Information.Category.Meta.Title)
 	log.Printf("Artist: %s\n", status.Information.Category.Meta.Artist)
@@ -38,7 +45,6 @@ func main() {
 }
 
 func GetVLCStatus(status *VLCStatus, vlcURL, password string) *VLCStatus {
-
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", vlcURL, nil)
 	if err != nil {
@@ -47,8 +53,12 @@ func GetVLCStatus(status *VLCStatus, vlcURL, password string) *VLCStatus {
 	req.SetBasicAuth("", password)
 
 	resp, err := client.Do(req)
+	log.Println(resp.Status)
 	if err != nil {
 		log.Fatalf("Failed to get VLC status: %v", err)
+	}
+	if resp.StatusCode != 200 {
+		log.Fatalf("May be missing password: %v\n", resp.Status)
 	}
 	defer resp.Body.Close()
 
